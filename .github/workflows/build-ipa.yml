@@ -1,0 +1,40 @@
+name: Build Mush8 IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Falls "macos-26" nicht verfügbar ist, hier auf "macos-latest" ändern
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Xcode 26 auswählen
+        run: |
+          ls /Applications | grep -i xcode || true
+          XC=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$XC" ]; then sudo xcode-select -s "$XC/Contents/Developer"; fi
+          xcodebuild -version
+
+      - name: Rust installieren
+        run: |
+          rustup toolchain install 1.98.1
+          rustup target add aarch64-apple-ios --toolchain 1.98.1
+
+      - name: xcodegen installieren
+        run: brew install xcodegen
+
+      - name: IPA bauen
+        run: |
+          chmod +x make-ios.sh build.sh make-app.sh
+          ./make-ios.sh --ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mush8-ipa
+          path: build/Mush8.ipa
+          if-no-files-found: error
